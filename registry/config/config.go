@@ -42,6 +42,15 @@ type Config struct {
 	}
 
 	ServeIf bool `yaml:"serve_if"`
+
+	Proxy struct {
+		Enabled bool   `yaml:"enabled"`
+		Type    string `yaml:"type"` // "http", "socks5", "socks4"
+		Host    string `yaml:"host"`
+		Port    int    `yaml:"port"`
+		Username string `yaml:"username"`
+		Password string `yaml:"password"`
+	} `yaml:"proxy"`
 }
 
 var (

@@ -1,18 +1,21 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/aliharirian/TerraPeak/config"
 	"github.com/aliharirian/TerraPeak/logger"
 	"github.com/aliharirian/TerraPeak/metrics"
+	"github.com/aliharirian/TerraPeak/proxy"
 	"github.com/aliharirian/TerraPeak/store"
 	"github.com/go-chi/chi/v5"
 )
 
 type Service struct {
-	cfg   *config.Config
-	store *store.Store
+	cfg         *config.Config
+	store       *store.Store
+	proxyHandler *proxy.Handler
 }
 
 func New(cfg *config.Config) (*Service, error) {
@@ -23,9 +26,17 @@ func New(cfg *config.Config) (*Service, error) {
 		return nil, err
 	}
 
+	// Initialize proxy handler
+	proxyHandler, err := proxy.NewHandler(cfg)
+	if err != nil {
+		logger.Errorf("Failed to initialize proxy handler: %v", err)
+		return nil, err
+	}
+
 	return &Service{
-		cfg:   cfg,
-		store: st,
+		cfg:          cfg,
+		store:        st,
+		proxyHandler: proxyHandler,
 	}, nil
 }
 
@@ -46,6 +57,11 @@ func (s *Service) RegisterRoutes(router chi.Router) {
 	// Proxy and cache endpoints
 	router.Get("/*", func(w http.ResponseWriter, r *http.Request) { s.store.HandleRequest(w, r) })
 
+	// Proxy endpoints
+	router.HandleFunc("/proxy/http/*", s.proxyHandler.HandleHTTPProxy)
+	router.HandleFunc("/proxy/socks", s.HandleSOCKSProxy)
+	router.Get("/proxy/info", s.GetProxyInfo)
+
 }
 
 func (s *Service) WellKnown(responseWriter http.ResponseWriter, request *http.Request) {
@@ -63,6 +79,40 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte(`{"message": "Welcome to the Terraform Registry API"}`))
 	if err != nil {
 		logger.Errorf("Failed to write response: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// HandleSOCKSProxy handles SOCKS proxy connections
+func (s *Service) HandleSOCKSProxy(w http.ResponseWriter, r *http.Request) {
+	// Hijack the connection for SOCKS protocol
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
+		return
+	}
+
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		logger.Errorf("Failed to hijack connection: %v", err)
+		return
+	}
+
+	// Handle SOCKS proxy
+	s.proxyHandler.HandleSOCKSProxy(conn)
+}
+
+// GetProxyInfo returns information about the proxy configuration
+func (s *Service) GetProxyInfo(w http.ResponseWriter, r *http.Request) {
+	// Get proxy info from the handler's client
+	info := s.proxyHandler.GetClient().GetProxyInfo()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(info); err != nil {
+		logger.Errorf("Failed to encode proxy info: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

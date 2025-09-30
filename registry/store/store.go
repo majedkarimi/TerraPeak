@@ -16,13 +16,15 @@ import (
 
 	"github.com/aliharirian/TerraPeak/config"
 	"github.com/aliharirian/TerraPeak/logger"
+	"github.com/aliharirian/TerraPeak/proxy"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type Store struct {
-	config *config.Config
-	client *minio.Client // MinIO client (nil if not using MinIO)
+	config     *config.Config
+	client     *minio.Client // MinIO client (nil if not using MinIO)
+	proxyClient *proxy.Client // Proxy-enabled HTTP client
 }
 
 // New creates a new Store instance with the given config
@@ -30,6 +32,14 @@ func New(cfg *config.Config) (*Store, error) {
 	store := &Store{
 		config: cfg,
 	}
+
+	// Initialize proxy client
+	proxyClient, err := proxy.New(cfg)
+	if err != nil {
+		logger.Errorf("Failed to initialize proxy client: %v", err)
+		return nil, err
+	}
+	store.proxyClient = proxyClient
 
 	if err := store.init(); err != nil {
 		return nil, err
@@ -176,7 +186,18 @@ func (s *Store) HandleRequest(w http.ResponseWriter, r *http.Request) {
 func (s *Store) getSourceStream(downloadURL string) (io.ReadCloser, int64, error) {
 	logger.Debugf("Opening stream from %s", downloadURL)
 
-	resp, err := http.Get(downloadURL)
+	// Use proxy-enabled client if proxy is configured
+	var resp *http.Response
+	var err error
+
+	if s.proxyClient.IsProxyEnabled() {
+		logger.Debugf("Using proxy-enabled client for download")
+		resp, err = s.proxyClient.Get(downloadURL)
+	} else {
+		logger.Debugf("Using direct connection for download")
+		resp, err = http.Get(downloadURL)
+	}
+
 	if err != nil {
 		logger.Errorf("Error creating HTTP request: %v", err)
 		return nil, 0, err
