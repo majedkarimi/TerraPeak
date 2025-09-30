@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"testing"
@@ -160,12 +159,12 @@ func (m *mockResponseWriter) WriteHeader(statusCode int) {
 func TestProxyConfigurationValidation(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      config.Proxy
+		proxyConfig config.Proxy
 		expectError bool
 	}{
 		{
 			name: "Valid HTTP proxy",
-			config: config.Proxy{
+			proxyConfig: config.Proxy{
 				Enabled:  true,
 				Type:     "http",
 				Host:     "127.0.0.1",
@@ -177,7 +176,7 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Valid SOCKS5 proxy",
-			config: config.Proxy{
+			proxyConfig: config.Proxy{
 				Enabled:  true,
 				Type:     "socks5",
 				Host:     "127.0.0.1",
@@ -189,7 +188,7 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Valid SOCKS4 proxy",
-			config: config.Proxy{
+			proxyConfig: config.Proxy{
 				Enabled:  true,
 				Type:     "socks4",
 				Host:     "127.0.0.1",
@@ -200,7 +199,7 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid proxy type",
-			config: config.Proxy{
+			proxyConfig: config.Proxy{
 				Enabled: true,
 				Type:    "invalid",
 				Host:    "127.0.0.1",
@@ -210,7 +209,7 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Disabled proxy",
-			config: config.Proxy{
+			proxyConfig: config.Proxy{
 				Enabled: false,
 			},
 			expectError: false,
@@ -220,7 +219,7 @@ func TestProxyConfigurationValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{}
-			cfg.Proxy = tt.config
+			cfg.Proxy = tt.proxyConfig
 
 			_, err := New(cfg)
 			if tt.expectError && err == nil {

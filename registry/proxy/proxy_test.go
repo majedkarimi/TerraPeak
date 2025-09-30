@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"context"
 	"net/http"
 	"net/url"
 	"testing"
