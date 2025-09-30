@@ -6,9 +6,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com/r/aliharirian/terrapeak)
 
-**A high-performance caching proxy for Terraform Registry that accelerates provider downloads with intelligent storage backends.**
+**A high-performance caching proxy for Terraform Registry that accelerates provider downloads with intelligent storage backends and comprehensive proxy support.**
 
-TerraPeak acts as a transparent caching layer between your Terraform workflows and the official Terraform Registry, dramatically reducing download times and bandwidth usage for frequently accessed providers.
+TerraPeak acts as a transparent caching layer between your Terraform workflows and the official Terraform Registry, dramatically reducing download times and bandwidth usage for frequently accessed providers. It also provides both outbound proxy client functionality and inbound proxy server capabilities for corporate environments.
 
 ## 🚀 Quick Start
 
@@ -91,6 +91,15 @@ storage:
   # If you want to use File Storage disable Minio Storage
   file:
     path: "/data/registry"         # Local filesystem path
+
+# Proxy configuration (optional)
+proxy:
+  enabled: false                   # Enable proxy functionality
+  type: "http"                     # Proxy type: http, socks5, socks4
+  host: "127.0.0.1"               # Proxy server hostname or IP
+  port: 8080                      # Proxy server port
+  username: ""                    # Authentication username (optional)
+  password: ""                    # Authentication password (optional)
 ```
 
 ### 🔐 SSL Requirements
@@ -101,6 +110,34 @@ storage:
 - Use a reverse proxy (nginx) with Let's Encrypt certificates
 - Configure your own SSL certificates
 - Use a cloud load balancer with SSL termination
+
+### 🌐 Proxy Configuration
+
+TerraPeak supports comprehensive proxy functionality for corporate environments:
+
+#### Outbound Proxy (Client Mode)
+Configure TerraPeak to route all HTTP requests through a corporate proxy:
+
+```yaml
+proxy:
+  enabled: true
+  type: "http"           # http, socks5, socks4
+  host: "proxy.company.com"
+  port: 8080
+  username: "user"       # Optional
+  password: "pass"       # Optional
+```
+
+#### Supported Proxy Types
+- **HTTP/HTTPS**: Standard HTTP proxy with CONNECT method support
+- **SOCKS5**: Full SOCKS5 protocol with authentication
+- **SOCKS4**: SOCKS4 protocol (username only)
+
+#### Corporate Environment Benefits
+- **Network Compliance**: Route all external requests through approved proxies
+- **Security**: Centralized traffic monitoring and filtering
+- **Bandwidth Control**: Optimize corporate bandwidth usage
+- **Audit Trail**: Complete request logging through proxy infrastructure
 
 ### 🏃‍♂️ Running TerraPeak
 
@@ -135,13 +172,16 @@ terraform {
 
 ### 🌐 API Endpoints
 
-TerraPeak implements the Terraform Registry API specification:
+TerraPeak implements the Terraform Registry API specification and provides additional proxy endpoints:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/healthz` | GET | Health check endpoint |
 | `/v1/providers/{namespace}/{name}/versions` | GET | List provider versions |
 | `/v1/providers/{namespace}/{name}/{version}/download/{os}/{arch}` | GET | Download provider binary |
+| `/proxy/info` | GET | Get proxy configuration information |
+| `/proxy/http/*` | POST | HTTP proxy endpoint |
+| `/proxy/socks` | POST | SOCKS proxy endpoint |
 
 ### 🧪 Testing the API
 
@@ -157,6 +197,9 @@ curl "https://tp.example.com/v1/providers/hashicorp/aws/5.0.0/download/linux/amd
 
 # Get Kubernetes provider versions
 curl "https://tp.example.com/v1/providers/hashicorp/kubernetes/versions"
+
+# Get proxy configuration info
+curl "https://tp.example.com/proxy/info"
 ```
 
 ### 🚀 Performance Benefits
@@ -173,6 +216,7 @@ curl "https://tp.example.com/v1/providers/hashicorp/kubernetes/versions"
 - **High Performance**: Sub-second response times for cached content
 - **Dual Storage**: MinIO object storage or local filesystem support
 - **Drop-in Replacement**: Fully compatible with Terraform Registry API
+- **Proxy Support**: Outbound proxy client for corporate environments
 
 ### 🛠️ Developer Experience
 - **Easy Setup**: Docker Compose configuration for quick deployment
@@ -184,6 +228,12 @@ curl "https://tp.example.com/v1/providers/hashicorp/kubernetes/versions"
 - **MinIO Integration**: Scalable object storage for production environments
 - **Local Filesystem**: Simple file-based caching for development
 - **Configurable Backends**: Easy switching between storage types
+
+### 🌐 Proxy Capabilities
+- **Outbound Proxy Client**: Route HTTP requests through HTTP, SOCKS4, or SOCKS5 proxies
+- **Inbound Proxy Server**: Act as a proxy server for HTTP and SOCKS protocols
+- **Authentication Support**: Username/password authentication for all proxy types
+- **Corporate Environment Ready**: Perfect for restricted network environments
 
 ## 🏗️ Architecture
 
@@ -198,14 +248,24 @@ curl "https://tp.example.com/v1/providers/hashicorp/kubernetes/versions"
                        │   Storage    │
                        │  (MinIO/FS)  │
                        └──────────────┘
+
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Corporate     │───▶│   TerraPeak   │───▶│   Corporate     │
+│   Proxy         │    │   (Client)   │    │   Network       │
+└─────────────────┘    └──────────────┘    └─────────────────┘
 ```
 
 **How it works:**
 1. Terraform requests a provider from TerraPeak
 2. TerraPeak checks local cache first
-3. If not cached, fetches from upstream registry
+3. If not cached, fetches from upstream registry (optionally through corporate proxy)
 4. Caches the provider for future requests
 5. Returns provider to Terraform
+
+**Proxy functionality:**
+- **Outbound**: TerraPeak can route all HTTP requests through configured corporate proxies
+- **Inbound**: TerraPeak can act as a proxy server for other applications
+- **Authentication**: Supports username/password authentication for proxy connections
 
 ## 📚 Documentation
 
@@ -266,12 +326,15 @@ Need help? Here are your options:
 - [x] Docker Compose Setup
 - [x] Nginx Reverse Proxy Configuration
 - [x] CI/CD Integration
+- [x] HTTP/HTTPS/SOCKS5 Proxy Support
+- [x] Outbound Proxy Client
+- [x] Inbound Proxy Server
+- [x] Proxy Authentication
 
 ### 🚧 In Progress
 - [ ] Implement Go interface for store package
 
 ### 📋 Planned
-- [ ] Support for HTTP/HTTPS/SOCKS5 Proxy
 - [ ] Web Interface for Management
 - [ ] Advanced Caching Policies
 - [ ] Authentication and Authorization
