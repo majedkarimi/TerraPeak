@@ -159,12 +159,26 @@ func (m *mockResponseWriter) WriteHeader(statusCode int) {
 func TestProxyConfigurationValidation(t *testing.T) {
 	tests := []struct {
 		name        string
-		proxyConfig config.Proxy
+		proxyConfig struct {
+			Enabled  bool
+			Type     string
+			Host     string
+			Port     int
+			Username string
+			Password string
+		}
 		expectError bool
 	}{
 		{
 			name: "Valid HTTP proxy",
-			proxyConfig: config.Proxy{
+			proxyConfig: struct {
+				Enabled  bool
+				Type     string
+				Host     string
+				Port     int
+				Username string
+				Password string
+			}{
 				Enabled:  true,
 				Type:     "http",
 				Host:     "127.0.0.1",
@@ -176,7 +190,14 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Valid SOCKS5 proxy",
-			proxyConfig: config.Proxy{
+			proxyConfig: struct {
+				Enabled  bool
+				Type     string
+				Host     string
+				Port     int
+				Username string
+				Password string
+			}{
 				Enabled:  true,
 				Type:     "socks5",
 				Host:     "127.0.0.1",
@@ -188,7 +209,14 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Valid SOCKS4 proxy",
-			proxyConfig: config.Proxy{
+			proxyConfig: struct {
+				Enabled  bool
+				Type     string
+				Host     string
+				Port     int
+				Username string
+				Password string
+			}{
 				Enabled:  true,
 				Type:     "socks4",
 				Host:     "127.0.0.1",
@@ -199,7 +227,14 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Invalid proxy type",
-			proxyConfig: config.Proxy{
+			proxyConfig: struct {
+				Enabled  bool
+				Type     string
+				Host     string
+				Port     int
+				Username string
+				Password string
+			}{
 				Enabled: true,
 				Type:    "invalid",
 				Host:    "127.0.0.1",
@@ -209,7 +244,14 @@ func TestProxyConfigurationValidation(t *testing.T) {
 		},
 		{
 			name: "Disabled proxy",
-			proxyConfig: config.Proxy{
+			proxyConfig: struct {
+				Enabled  bool
+				Type     string
+				Host     string
+				Port     int
+				Username string
+				Password string
+			}{
 				Enabled: false,
 			},
 			expectError: false,
@@ -219,7 +261,12 @@ func TestProxyConfigurationValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{}
-			cfg.Proxy = tt.proxyConfig
+			cfg.Proxy.Enabled = tt.proxyConfig.Enabled
+			cfg.Proxy.Type = tt.proxyConfig.Type
+			cfg.Proxy.Host = tt.proxyConfig.Host
+			cfg.Proxy.Port = tt.proxyConfig.Port
+			cfg.Proxy.Username = tt.proxyConfig.Username
+			cfg.Proxy.Password = tt.proxyConfig.Password
 
 			_, err := New(cfg)
 			if tt.expectError && err == nil {
