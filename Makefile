@@ -223,12 +223,13 @@ pre-commit-full: ## Full pre-commit checks (comprehensive)
 	@echo "✅ Full pre-commit checks passed!"
 	@echo "🚀 Ready to commit and push!"
 
-git-push: push-check ## Run full checks and push (interactive)
+git-push: ## Run full checks and push
 	@echo "🚀 Running pre-push checks..."
 	@$(MAKE) pre-commit-full
 	@echo ""
-	@echo "🚀 Ready to push. Please run:"
-	@echo "git push origin main"
+	@echo "🚀 Ready to push!"
+	git push origin main
+	@echo "✅ Push complete!"
 
 # Quick targets for common workflows
 quick-test: fmt vet test-unit ## Quick test cycle (format, vet, unit tests)
