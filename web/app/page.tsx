@@ -1,703 +1,1024 @@
 "use client"
 
-import { Menu, X, Star, Copy, ChevronRight } from "lucide-react"
 import { useState, useEffect } from "react"
-
-// Sample module data
-const modulesData = [
-  {
-    id: 1,
-    namespace: "terraform-aws-modules",
-    name: "vpc",
-    fullName: "terraform-aws-modules/vpc/aws",
-    description: "Terraform module which creates VPC resources on AWS",
-    tags: ["aws", "network", "vpc"],
-    stars: 2845,
-    version: "5.1.2",
-    provider: "hashicorp/aws",
-    versions: [
-      { version: "5.1.2", date: "2024-01-15" },
-      { version: "5.1.1", date: "2023-12-20" },
-      { version: "5.1.0", date: "2023-11-10" },
-    ],
-  },
-  {
-    id: 2,
-    namespace: "terraform-google-modules",
-    name: "kubernetes-engine",
-    fullName: "terraform-google-modules/kubernetes-engine/google",
-    description: "Modular and composable GKE cluster on Google Cloud Platform",
-    tags: ["gcp", "kubernetes", "gke"],
-    stars: 1523,
-    version: "28.0.0",
-    provider: "hashicorp/google",
-    versions: [
-      { version: "28.0.0", date: "2024-02-01" },
-      { version: "27.0.0", date: "2023-12-15" },
-    ],
-  },
-  {
-    id: 3,
-    namespace: "terraform-aws-modules",
-    name: "eks",
-    fullName: "terraform-aws-modules/eks/aws",
-    description: "Terraform module to create an Elastic Kubernetes (EKS) cluster on AWS",
-    tags: ["aws", "kubernetes", "eks"],
-    stars: 3421,
-    version: "19.16.0",
-    provider: "hashicorp/aws",
-    versions: [
-      { version: "19.16.0", date: "2024-01-28" },
-      { version: "19.15.3", date: "2024-01-10" },
-    ],
-  },
-  {
-    id: 4,
-    namespace: "terraform-aws-modules",
-    name: "rds",
-    fullName: "terraform-aws-modules/rds/aws",
-    description: "Terraform module which creates RDS resources on AWS",
-    tags: ["aws", "database", "rds"],
-    stars: 1876,
-    version: "6.3.0",
-    provider: "hashicorp/aws",
-    versions: [
-      { version: "6.3.0", date: "2024-01-20" },
-      { version: "6.2.0", date: "2023-12-05" },
-    ],
-  },
-  {
-    id: 5,
-    namespace: "terraform-aws-modules",
-    name: "security-group",
-    fullName: "terraform-aws-modules/security-group/aws",
-    description: "Terraform module which creates EC2 security group resources on AWS",
-    tags: ["aws", "security", "network"],
-    stars: 1234,
-    version: "5.1.0",
-    provider: "hashicorp/aws",
-    versions: [
-      { version: "5.1.0", date: "2024-01-12" },
-      { version: "5.0.0", date: "2023-11-20" },
-    ],
-  },
-  {
-    id: 6,
-    namespace: "terraform-google-modules",
-    name: "network",
-    fullName: "terraform-google-modules/network/google",
-    description: "Sets up a new VPC network on Google Cloud",
-    tags: ["gcp", "network", "vpc"],
-    stars: 987,
-    version: "8.0.0",
-    provider: "hashicorp/google",
-    versions: [
-      { version: "8.0.0", date: "2024-01-25" },
-      { version: "7.5.0", date: "2023-12-10" },
-    ],
-  },
-  {
-    id: 7,
-    namespace: "Azure",
-    name: "aks",
-    fullName: "Azure/aks/azurerm",
-    description: "Terraform module for deploying an AKS cluster on Azure",
-    tags: ["azure", "kubernetes", "aks"],
-    stars: 1654,
-    version: "7.5.0",
-    provider: "hashicorp/azurerm",
-    versions: [
-      { version: "7.5.0", date: "2024-02-05" },
-      { version: "7.4.0", date: "2024-01-15" },
-    ],
-  },
-  {
-    id: 8,
-    namespace: "terraform-aws-modules",
-    name: "s3-bucket",
-    fullName: "terraform-aws-modules/s3-bucket/aws",
-    description: "Terraform module which creates S3 bucket resources on AWS",
-    tags: ["aws", "storage", "s3"],
-    stars: 2156,
-    version: "3.15.1",
-    provider: "hashicorp/aws",
-    versions: [
-      { version: "3.15.1", date: "2024-01-30" },
-      { version: "3.15.0", date: "2024-01-05" },
-    ],
-  },
-]
-
-type Module = (typeof modulesData)[0]
 
 export default function TerraformRegistry() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [filteredModules, setFilteredModules] = useState<Module[]>(modulesData)
-  const [displayedCount, setDisplayedCount] = useState(6)
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
-  const [selectedProviders, setSelectedProviders] = useState<Set<string>>(new Set())
-  const [currentSort, setCurrentSort] = useState("stars")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [heroSearchTerm, setHeroSearchTerm] = useState("")
-  const [selectedModule, setSelectedModule] = useState<Module | null>(null)
-  const [copySuccess, setCopySuccess] = useState(false)
 
-  // Filter and sort modules
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch (err) {
+      console.error("Failed to copy text:", err)
+    }
+  }
+
   useEffect(() => {
-    const filtered = modulesData.filter((module) => {
-      const matchesSearch =
-        !searchTerm ||
-        module.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        module.namespace.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        module.description.toLowerCase().includes(searchTerm.toLowerCase())
-
-      const matchesTags = selectedTags.size === 0 || module.tags.some((tag) => selectedTags.has(tag))
-
-      const matchesProvider = selectedProviders.size === 0 || selectedProviders.has(module.provider)
-
-      return matchesSearch && matchesTags && matchesProvider
-    })
-
-    // Sort
-    filtered.sort((a, b) => {
-      if (currentSort === "stars") {
-        return b.stars - a.stars
-      } else if (currentSort === "recent") {
-        return new Date(b.versions[0].date).getTime() - new Date(a.versions[0].date).getTime()
-      } else if (currentSort === "name") {
-        return a.name.localeCompare(b.name)
+    // Smooth scroll for anchor links
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLAnchorElement
+      if (target.tagName === "A" && target.hash) {
+        const href = target.getAttribute("href")
+        if (href?.startsWith("#")) {
+          e.preventDefault()
+          const element = document.querySelector(href)
+          if (element) {
+            const headerOffset = 80
+            const elementPosition = element.getBoundingClientRect().top
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: "smooth",
+            })
+          }
+        }
       }
-      return 0
-    })
-
-    setFilteredModules(filtered)
-    setDisplayedCount(6)
-  }, [searchTerm, selectedTags, selectedProviders, currentSort])
-
-  const toggleTag = (tag: string) => {
-    const newTags = new Set(selectedTags)
-    if (newTags.has(tag)) {
-      newTags.delete(tag)
-    } else {
-      newTags.add(tag)
     }
-    setSelectedTags(newTags)
-  }
 
-  const toggleProvider = (provider: string) => {
-    const newProviders = new Set(selectedProviders)
-    if (newProviders.has(provider)) {
-      newProviders.delete(provider)
-    } else {
-      newProviders.add(provider)
-    }
-    setSelectedProviders(newProviders)
-  }
-
-  const clearFilters = () => {
-    setSelectedTags(new Set())
-    setSelectedProviders(new Set())
-  }
-
-  const handleHeroSearch = () => {
-    setSearchTerm(heroSearchTerm)
-    document.getElementById("module-list")?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  const copyToClipboard = () => {
-    if (!selectedModule) return
-    const code = `module "${selectedModule.name}" {
-  source  = "${selectedModule.fullName}"
-  version = "${selectedModule.version}"
-  
-  # Configuration options
-}`
-    navigator.clipboard.writeText(code).then(() => {
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
-    })
-  }
+    document.addEventListener("click", handleAnchorClick)
+    return () => document.removeEventListener("click", handleAnchorClick)
+  }, [])
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                T
-              </span>
-              <span className="text-xl font-bold text-gray-900">
-                terra<span className="text-green-600">peak</span>
-              </span>
-            </div>
+    <>
+      <style jsx global>{`
+        html {
+          scroll-behavior: smooth;
+        }
+        .code-block {
+          position: relative;
+        }
+        .copy-btn {
+          transition: all 0.2s ease;
+        }
+        .copy-btn:hover {
+          transform: translateY(-1px);
+        }
+        .toast {
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          transform: translateY(150%);
+          transition: transform 0.3s ease;
+          z-index: 1000;
+        }
+        .toast.show {
+          transform: translateY(0);
+        }
+        details summary {
+          cursor: pointer;
+          user-select: none;
+        }
+        details summary::-webkit-details-marker {
+          display: none;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .fade-in {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+      `}</style>
 
-            {/* Desktop Nav */}
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#browse" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-                Browse
-              </a>
-              <a href="#providers" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-                Providers
-              </a>
-              <a href="#modules" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-                Modules
-              </a>
-              <a href="#docs" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-                Documentation
-              </a>
-            </div>
+      <div className="bg-black text-gray-100 font-sans antialiased">
+        {/* Header / Navigation */}
+        <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
+          <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              {/* Logo */}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold text-white">terrapeak</span>
+              </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100"
-              aria-label="Toggle menu"
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-
-          {/* Mobile Nav */}
-          {mobileMenuOpen && (
-            <div className="md:hidden pb-4">
-              <div className="flex flex-col gap-2">
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-8">
                 <a
-                  href="#browse"
-                  className="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors"
+                  href="#home"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
+                >
+                  Home
+                </a>
+                <a
+                  href="/browse"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
                 >
                   Browse
                 </a>
                 <a
-                  href="#providers"
-                  className="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors"
+                  href="#quickstart"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
                 >
-                  Providers
+                  Quickstart
                 </a>
                 <a
-                  href="#modules"
-                  className="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors"
+                  href="#features"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
                 >
-                  Modules
+                  Features
                 </a>
                 <a
                   href="#docs"
-                  className="px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-green-600 transition-colors"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
                 >
-                  Documentation
+                  Docs
+                </a>
+                <a
+                  href="https://github.com/aliharirian/TerraPeak"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black rounded px-2 py-1"
+                >
+                  GitHub
                 </a>
               </div>
-            </div>
-          )}
-        </nav>
-      </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-green-50 to-green-100 border-b border-green-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Terraform Module Registry</h1>
-            <p className="text-lg text-gray-700 mb-8">
-              Discover and share Terraform modules and providers for your infrastructure
-            </p>
-
-            {/* Hero Search */}
-            <div className="relative max-w-2xl mx-auto">
-              <input
-                type="text"
-                value={heroSearchTerm}
-                onChange={(e) => setHeroSearchTerm(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleHeroSearch()}
-                placeholder="Search modules, providers..."
-                className="w-full px-4 py-3 pr-24 rounded-lg border-2 border-green-300 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 text-gray-900"
-                aria-label="Search modules and providers"
-              />
-              <button
-                onClick={handleHeroSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+              {/* Star Button */}
+              <a
+                href="https://github.com/aliharirian/TerraPeak"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg border border-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black"
               >
-                Search
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                <span className="text-sm font-medium">Star on GitHub</span>
+              </a>
+
+              {/* Mobile Menu Button */}
+              <button
+                id="mobile-menu-btn"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
               </button>
             </div>
 
-            <div className="mt-6">
-              <a
-                href="#browse"
-                className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-md hover:shadow-lg"
-              >
-                Browse Modules
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <aside className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg border border-gray-200 p-4 sticky top-20">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-                <button onClick={clearFilters} className="text-sm text-green-600 hover:text-green-700 font-medium">
-                  Clear
-                </button>
-              </div>
-
-              {/* Tags Filter */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {["aws", "gcp", "kubernetes", "network", "security", "database"].map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1 rounded-full border text-sm transition-colors ${
-                        selectedTags.has(tag)
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : "border-gray-300 text-gray-700 hover:border-green-500 hover:bg-green-50 hover:text-green-700"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Provider Filter */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Providers</h3>
-                <div className="space-y-2">
-                  {["hashicorp/aws", "hashicorp/google", "hashicorp/kubernetes", "hashicorp/azurerm"].map(
-                    (provider) => (
-                      <label key={provider} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedProviders.has(provider)}
-                          onChange={() => toggleProvider(provider)}
-                          className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                        />
-                        <span className="text-sm text-gray-700">{provider}</span>
-                      </label>
-                    ),
-                  )}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* Module List */}
-          <div className="flex-1">
-            {/* Search and Sort Bar */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="relative flex-1 w-full">
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Filter modules..."
-                    className="w-full px-4 py-2 pr-10 rounded-md border border-gray-300 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400"
-                    aria-label="Filter modules"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label="Clear search"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <label htmlFor="sort-select" className="text-sm text-gray-700 font-medium whitespace-nowrap">
-                    Sort by:
-                  </label>
-                  <select
-                    id="sort-select"
-                    value={currentSort}
-                    onChange={(e) => setCurrentSort(e.target.value)}
-                    className="px-3 py-2 rounded-md border border-gray-300 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+            {/* Mobile Menu */}
+            {mobileMenuOpen && (
+              <div id="mobile-menu" className="md:hidden pb-4">
+                <div className="flex flex-col gap-2">
+                  <a
+                    href="#home"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    <option value="stars">Most Starred</option>
-                    <option value="recent">Recently Updated</option>
-                    <option value="name">Name (A-Z)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Results Count */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">
-                Showing {Math.min(displayedCount, filteredModules.length)} of {filteredModules.length} modules
-              </p>
-            </div>
-
-            {/* Module Grid */}
-            <div id="module-list" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {filteredModules.slice(0, displayedCount).map((module) => {
-                const initials = module.namespace.substring(0, 2).toUpperCase()
-                return (
-                  <article
-                    key={module.id}
-                    onClick={() => setSelectedModule(module)}
-                    className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                    Home
+                  </a>
+                  <a
+                    href="/browse"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold flex-shrink-0">
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 truncate">
-                          {module.namespace}/<span className="text-green-600">{module.name}</span>
-                        </h3>
-                        <p className="text-sm text-gray-600 truncate">{module.provider}</p>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-gray-700 mb-3 line-clamp-2">{module.description}</p>
-
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {module.tags.map((tag) => (
-                        <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <span className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          {module.stars}
-                        </span>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                          v{module.version}
-                        </span>
-                      </div>
-                      <button className="px-3 py-1 text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1">
-                        View <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-
-            {/* Load More */}
-            {displayedCount < filteredModules.length && (
-              <div className="text-center">
-                <button
-                  onClick={() => setDisplayedCount(displayedCount + 6)}
-                  className="px-6 py-3 bg-white border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium"
-                >
-                  Load More Modules
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      {/* Module Detail Modal */}
-      {selectedModule && (
-        <div
-          onClick={() => setSelectedModule(null)}
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto"
-        >
-          <div className="min-h-screen px-4 py-8 flex items-center justify-center">
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-            >
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-900">{selectedModule.fullName}</h2>
-                <button
-                  onClick={() => setSelectedModule(null)}
-                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                  aria-label="Close modal"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="px-6 py-6">
-                {/* Module Info */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-xl">
-                      {selectedModule.namespace.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">{selectedModule.namespace}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-sm text-gray-600">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          {selectedModule.stars}
-                        </span>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                          v{selectedModule.version}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-700 leading-relaxed">{selectedModule.description}</p>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {selectedModule.tags.map((tag) => (
-                      <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Usage Section */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Usage</h3>
-                  <div className="relative">
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                      <code>{`module "${selectedModule.name}" {
-  source  = "${selectedModule.fullName}"
-  version = "${selectedModule.version}"
-  
-  # Configuration options
-}`}</code>
-                    </pre>
-                    <button
-                      onClick={copyToClipboard}
-                      className="absolute top-3 right-3 px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors flex items-center gap-1"
-                    >
-                      <Copy className="w-4 h-4" />
-                      {copySuccess ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Versions Section */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Available Versions</h3>
-                  <div className="space-y-2">
-                    {selectedModule.versions.map((v) => (
-                      <div key={v.version} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                        <div>
-                          <span className="font-medium text-gray-900">v{v.version}</span>
-                          <span className="text-sm text-gray-600 ml-3">{v.date}</span>
-                        </div>
-                        <button className="text-sm text-green-600 hover:text-green-700 font-medium">Install</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
-                <button
-                  onClick={() => setSelectedModule(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Back to List
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  T
-                </span>
-                <span className="text-lg font-bold text-gray-900">
-                  terra<span className="text-green-600">peak</span>
-                </span>
-              </div>
-              <p className="text-sm text-gray-600">Your trusted Terraform module registry</p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Resources</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#docs" className="text-gray-600 hover:text-green-600">
-                    Documentation
+                    Browse
                   </a>
-                </li>
-                <li>
-                  <a href="#guides" className="text-gray-600 hover:text-green-600">
-                    Guides
+                  <a
+                    href="#quickstart"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    Quickstart
                   </a>
-                </li>
-                <li>
-                  <a href="#api" className="text-gray-600 hover:text-green-600">
-                    API Reference
+                  <a
+                    href="#features"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    Features
                   </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Community</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#github" className="text-gray-600 hover:text-green-600">
+                  <a
+                    href="#docs"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    Docs
+                  </a>
+                  <a
+                    href="https://github.com/aliharirian/TerraPeak"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-300 hover:text-white transition-colors px-2 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
                     GitHub
                   </a>
-                </li>
-                <li>
-                  <a href="#discord" className="text-gray-600 hover:text-green-600">
-                    Discord
-                  </a>
-                </li>
-                <li>
-                  <a href="#forum" className="text-gray-600 hover:text-green-600">
-                    Forum
-                  </a>
-                </li>
-              </ul>
-            </div>
+                </div>
+              </div>
+            )}
+          </nav>
+        </header>
 
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Company</h4>
-              <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#about" className="text-gray-600 hover:text-green-600">
-                    About
+        <main>
+          {/* Hero Section */}
+          <section id="home" className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center max-w-4xl mx-auto fade-in">
+                <div className="inline-block mb-4 px-4 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full">
+                  <span className="text-sm text-green-400 font-medium">Open Source • High Performance</span>
+                </div>
+
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                  A high-performance caching proxy for Terraform Registry
+                </h1>
+
+                <p className="text-lg sm:text-xl text-gray-400 mb-8 leading-relaxed max-w-3xl mx-auto">
+                  Accelerate your Terraform provider downloads and reduce bandwidth costs. TerraPeak supports intelligent
+                  storage backends (MinIO, local file storage) and offers flexible proxy modes for corporate environments
+                  with outbound and inbound proxy support.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <a
+                    href="#quickstart"
+                    className="w-full sm:w-auto px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black"
+                  >
+                    Get Started — Docker Compose
                   </a>
-                </li>
-                <li>
-                  <a href="#blog" className="text-gray-600 hover:text-green-600">
-                    Blog
+                  <a
+                    href="https://github.com/aliharirian/TerraPeak"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto px-8 py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg border border-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black"
+                  >
+                    View on GitHub
                   </a>
-                </li>
-                <li>
-                  <a href="#contact" className="text-gray-600 hover:text-green-600">
-                    Contact
-                  </a>
-                </li>
-              </ul>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Features Section */}
+          <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Why TerraPeak?</h2>
+                <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+                  Built for DevOps teams who need reliable, fast, and secure Terraform provider caching
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Feature 1 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">High-Performance Caching</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    Dramatically reduce provider download times and bandwidth usage with intelligent caching. Perfect for
+                    teams running frequent Terraform operations.
+                  </p>
+                </div>
+
+                {/* Feature 2 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">Intelligent Storage Backends</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    Choose between MinIO for distributed object storage or local file storage. Scale your caching
+                    infrastructure to match your needs.
+                  </p>
+                </div>
+
+                {/* Feature 3 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">Flexible Proxy Support</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    Works seamlessly in corporate environments with outbound client proxy and inbound server proxy modes.
+                    Supports HTTP, SOCKS5, and SOCKS4 protocols.
+                  </p>
+                </div>
+
+                {/* Feature 4 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">HTTPS Required</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    TerraPeak requires HTTPS with valid SSL certificates to ensure Terraform accepts provider downloads
+                    securely. Built with security as a priority.
+                  </p>
+                </div>
+
+                {/* Feature 5 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">Corporate-Friendly</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    Designed for enterprise environments with support for various proxy types and configurations. Integrate
+                    seamlessly with your existing infrastructure.
+                  </p>
+                </div>
+
+                {/* Feature 6 */}
+                <div className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center mb-4">
+                    <svg
+                      className="w-6 h-6 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">Easy to Deploy</h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    Get started in minutes with Docker Compose, Docker, or build from source. Simple configuration with YAML
+                    files for all settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Quickstart Section */}
+          <section id="quickstart" className="py-20 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Get Started in Minutes</h2>
+                <p className="text-lg text-gray-400">Choose your preferred deployment method</p>
+              </div>
+
+              {/* Docker Compose */}
+              <div className="mb-12">
+                <h3 className="text-2xl font-semibold text-white mb-4 flex items-center gap-3">
+                  <span className="w-8 h-8 bg-green-500 text-black rounded-full flex items-center justify-center text-sm font-bold">
+                    1
+                  </span>
+                  Docker Compose (Recommended)
+                </h3>
+                <p className="text-gray-400 mb-4">The easiest way to get TerraPeak running with all dependencies:</p>
+
+                <div className="code-block bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500 font-mono">bash</span>
+                    <button
+                      className="copy-btn px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                      onClick={() =>
+                        copyToClipboard(
+                          `git clone https://github.com/aliharirian/TerraPeak.git\ncd TerraPeak\ndocker-compose up -d`
+                        )
+                      }
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="text-sm text-gray-300 overflow-x-auto">
+                    <code>{`git clone https://github.com/aliharirian/TerraPeak.git
+cd TerraPeak
+docker-compose up -d`}</code>
+                  </pre>
+                </div>
+
+                <p className="text-gray-400 text-sm">
+                  TerraPeak will be available on the configured ports. Check your{" "}
+                  <code className="px-2 py-0.5 bg-gray-800 text-green-400 rounded text-xs">cfg.yml</code> for server
+                  address settings.
+                </p>
+              </div>
+
+              {/* Docker Run */}
+              <div className="mb-12">
+                <h3 className="text-2xl font-semibold text-white mb-4 flex items-center gap-3">
+                  <span className="w-8 h-8 bg-green-500 text-black rounded-full flex items-center justify-center text-sm font-bold">
+                    2
+                  </span>
+                  Docker Run
+                </h3>
+                <p className="text-gray-400 mb-4">Pull and run the latest TerraPeak image:</p>
+
+                <div className="code-block bg-gray-900 border border-gray-800 rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500 font-mono">bash</span>
+                    <button
+                      className="copy-btn px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                      onClick={() => copyToClipboard("docker pull aliharirian/terrapeak:latest")}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="text-sm text-gray-300 overflow-x-auto">
+                    <code>docker pull aliharirian/terrapeak:latest</code>
+                  </pre>
+                </div>
+
+                <div className="code-block bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500 font-mono">bash</span>
+                    <button
+                      className="copy-btn px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                      onClick={() =>
+                        copyToClipboard(
+                          "docker run -d -p 8080:8080 -v $(pwd)/cfg.yml:/app/cfg.yml aliharirian/terrapeak:latest"
+                        )
+                      }
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="text-sm text-gray-300 overflow-x-auto">
+                    <code>
+                      docker run -d -p 8080:8080 -v $(pwd)/cfg.yml:/app/cfg.yml aliharirian/terrapeak:latest
+                    </code>
+                  </pre>
+                </div>
+              </div>
+
+              {/* Build from Source */}
+              <div>
+                <h3 className="text-2xl font-semibold text-white mb-4 flex items-center gap-3">
+                  <span className="w-8 h-8 bg-green-500 text-black rounded-full flex items-center justify-center text-sm font-bold">
+                    3
+                  </span>
+                  Build from Source
+                </h3>
+                <p className="text-gray-400 mb-4">For developers who want to build and customize:</p>
+
+                <div className="code-block bg-gray-900 border border-gray-800 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-gray-500 font-mono">bash</span>
+                    <button
+                      className="copy-btn px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                      onClick={() => copyToClipboard("cd registry\ngo build -o terrapeak\n./terrapeak")}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="text-sm text-gray-300 overflow-x-auto">
+                    <code>{`cd registry
+go build -o terrapeak
+./terrapeak`}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Configuration Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Configuration</h2>
+                <p className="text-lg text-gray-400">Configure TerraPeak with a simple YAML file</p>
+              </div>
+
+              <div className="bg-black border border-gray-800 rounded-xl p-6">
+                <details className="group">
+                  <summary className="flex items-center justify-between text-lg font-semibold text-white mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-2">
+                    <span>Example cfg.yml Configuration</span>
+                    <svg
+                      className="w-5 h-5 text-gray-400 transition-transform group-open:rotate-180"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+
+                  <div className="code-block bg-gray-900 border border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs text-gray-500 font-mono">yaml</span>
+                      <button
+                        className="copy-btn px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+                        onClick={() =>
+                          copyToClipboard(`server:
+  addr: ':8080'
+  domain: 'https://terrapeak.example.com'  # Must be HTTPS
+
+storage:
+  type: 'minio'  # or 'file'
+  minio:
+    endpoint: 'minio:9000'
+    accessKey: 'minioadmin'
+    secretKey: 'minioadmin'
+    bucket: 'terraform-providers'
+    useSSL: false
+
+proxy:
+  enabled: true
+  type: 'http'  # http, socks5, or socks4
+  url: 'http://proxy.example.com:8080'`)
+                        }
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="text-sm text-gray-300 overflow-x-auto">
+                      <code>{`server:
+  addr: ':8080'
+  domain: 'https://terrapeak.example.com'  # Must be HTTPS
+
+storage:
+  type: 'minio'  # or 'file'
+  minio:
+    endpoint: 'minio:9000'
+    accessKey: 'minioadmin'
+    secretKey: 'minioadmin'
+    bucket: 'terraform-providers'
+    useSSL: false
+
+proxy:
+  enabled: true
+  type: 'http'  # http, socks5, or socks4
+  url: 'http://proxy.example.com:8080'`}</code>
+                    </pre>
+                  </div>
+                </details>
+
+                <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <div className="flex gap-3">
+                    <svg
+                      className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div>
+                      <p className="text-sm text-green-400 font-semibold mb-1">Important: HTTPS Required</p>
+                      <p className="text-sm text-gray-300">
+                        The <code className="px-1.5 py-0.5 bg-gray-800 text-green-400 rounded text-xs">server.domain</code>{" "}
+                        must use HTTPS with valid SSL certificates. Terraform will not accept provider downloads over
+                        insecure connections.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Architecture Section */}
+          <section className="py-20 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">How It Works</h2>
+                <p className="text-lg text-gray-400">Simple, efficient architecture for maximum performance</p>
+              </div>
+
+              <div className="bg-black border border-gray-800 rounded-xl p-8">
+                {/* Architecture Diagram */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-8 mb-8">
+                  {/* Terraform Client */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 bg-purple-500/10 border-2 border-purple-500 rounded-lg flex items-center justify-center mb-3">
+                      <svg className="w-10 h-10 text-purple-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-semibold text-white">Terraform Client</span>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg
+                    className="w-8 h-8 text-green-500 rotate-90 md:rotate-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+
+                  {/* TerraPeak */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 bg-green-500/10 border-2 border-green-500 rounded-lg flex items-center justify-center mb-3">
+                      <svg
+                        className="w-10 h-10 text-green-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-semibold text-white">TerraPeak</span>
+                    <span className="text-xs text-gray-500">(Cache Layer)</span>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg
+                    className="w-8 h-8 text-green-500 rotate-90 md:rotate-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+
+                  {/* Storage / Registry */}
+                  <div className="flex flex-col items-center">
+                    <div className="w-20 h-20 bg-blue-500/10 border-2 border-blue-500 rounded-lg flex items-center justify-center mb-3">
+                      <svg
+                        className="w-10 h-10 text-blue-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-semibold text-white">MinIO / Registry</span>
+                    <span className="text-xs text-gray-500">(Backend Storage)</span>
+                  </div>
+                </div>
+
+                {/* Explanation */}
+                <div className="border-t border-gray-800 pt-6">
+                  <h3 className="text-lg font-semibold text-white mb-3">Request Flow</h3>
+                  <ol className="space-y-3 text-gray-400">
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                        1
+                      </span>
+                      <span>Terraform client requests a provider from TerraPeak</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                        2
+                      </span>
+                      <span>TerraPeak checks its cache (MinIO or local storage) for the provider</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                        3
+                      </span>
+                      <span>If cached, TerraPeak serves the provider immediately (fast path)</span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                        4
+                      </span>
+                      <span>
+                        If not cached, TerraPeak fetches from upstream registry, caches it, and serves to client
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                        5
+                      </span>
+                      <span>
+                        Subsequent requests for the same provider are served from cache, dramatically reducing download
+                        times
+                      </span>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Docs & Resources Section */}
+          <section id="docs" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-900/50">
+            <div className="max-w-5xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Documentation & Resources</h2>
+                <p className="text-lg text-gray-400">Everything you need to get the most out of TerraPeak</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* GitHub Repo */}
+                <a
+                  href="https://github.com/aliharirian/TerraPeak"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/10 transition-colors">
+                      <svg
+                        className="w-6 h-6 text-gray-400 group-hover:text-green-500 transition-colors"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-green-500 transition-colors">
+                        GitHub Repository
+                      </h3>
+                      <p className="text-gray-400 text-sm">View source code, report issues, and contribute to the project</p>
+                    </div>
+                  </div>
+                </a>
+
+                {/* README */}
+                <a
+                  href="https://github.com/aliharirian/TerraPeak#readme"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/10 transition-colors">
+                      <svg
+                        className="w-6 h-6 text-gray-400 group-hover:text-green-500 transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-green-500 transition-colors">
+                        README Documentation
+                      </h3>
+                      <p className="text-gray-400 text-sm">
+                        Complete setup guide, configuration options, and usage examples
+                      </p>
+                    </div>
+                  </div>
+                </a>
+
+                {/* Issues */}
+                <a
+                  href="https://github.com/aliharirian/TerraPeak/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/10 transition-colors">
+                      <svg
+                        className="w-6 h-6 text-gray-400 group-hover:text-green-500 transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-green-500 transition-colors">
+                        Report Issues
+                      </h3>
+                      <p className="text-gray-400 text-sm">Found a bug or have a feature request? Let us know on GitHub</p>
+                    </div>
+                  </div>
+                </a>
+
+                {/* License */}
+                <a
+                  href="https://github.com/aliharirian/TerraPeak/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-black border border-gray-800 rounded-xl p-6 hover:border-green-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gray-900 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-green-500/10 transition-colors">
+                      <svg
+                        className="w-6 h-6 text-gray-400 group-hover:text-green-500 transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-green-500 transition-colors">
+                        Open Source License
+                      </h3>
+                      <p className="text-gray-400 text-sm">Free to use, modify, and distribute under open source license</p>
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              {/* Badges */}
+              <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
+                <a
+                  href="https://github.com/aliharirian/TerraPeak"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                >
+                  <img
+                    src="https://img.shields.io/github/stars/aliharirian/TerraPeak?style=social"
+                    alt="GitHub stars"
+                    className="h-5"
+                  />
+                </a>
+                <a
+                  href="https://github.com/aliharirian/TerraPeak/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                >
+                  <img
+                    src="https://img.shields.io/github/license/aliharirian/TerraPeak"
+                    alt="License"
+                    className="h-5"
+                  />
+                </a>
+                <a
+                  href="https://github.com/aliharirian/TerraPeak/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                >
+                  <img
+                    src="https://img.shields.io/github/issues/aliharirian/TerraPeak"
+                    alt="GitHub issues"
+                    className="h-5"
+                  />
+                </a>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        {/* Footer */}
+        <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-lg font-bold text-white">terrapeak</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4 text-sm text-gray-400">
+                <span>© 2025 TerraPeak. Open Source Project.</span>
+                <a
+                  href="https://github.com/aliharirian/TerraPeak/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                >
+                  License
+                </a>
+                <a
+                  href="https://github.com/aliharirian"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-2 py-1"
+                >
+                  Contributors
+                </a>
+              </div>
             </div>
           </div>
+        </footer>
 
-          <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-600">
-            <p>&copy; 2025 terrapeak. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </>
   )
 }
