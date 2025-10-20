@@ -14,7 +14,7 @@ import (
 func createTestConfig(tempDir string) *config.Config {
 	return &config.Config{
 		Storage: struct {
-			Minio struct {
+			S3 struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -22,12 +22,12 @@ func createTestConfig(tempDir string) *config.Config {
 				SecretKey string `yaml:"secret_key"`
 				Bucket    string `yaml:"bucket"`
 				SkipSSL   bool   `yaml:"skip_ssl_verify"`
-			} `yaml:"minio"`
+			} `yaml:"s3"`
 			File struct {
 				Path string `yaml:"path"`
 			} `yaml:"file"`
 		}{
-			Minio: struct {
+			S3: struct {
 				Enabled   bool   `yaml:"enabled"`
 				Endpoint  string `yaml:"endpoint"`
 				Region    string `yaml:"region"`
@@ -63,7 +63,7 @@ func TestNew(t *testing.T) {
 	}
 
 	if store == nil {
-		t.Error("Expected non-nil store")
+		t.Fatal("Expected non-nil store")
 	}
 
 	if store.config != cfg {
@@ -227,89 +227,7 @@ func TestGenerateURL(t *testing.T) {
 	}
 }
 
-func TestParseMinIOEndpoint(t *testing.T) {
-	cfg := createTestConfig("/tmp")
-	store, err := New(cfg)
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
-	tests := []struct {
-		name         string
-		endpoint     string
-		skipSSL      bool
-		expectedHost string
-		expectedSSL  bool
-		shouldError  bool
-	}{
-		{
-			name:         "http endpoint",
-			endpoint:     "http://localhost:9000",
-			skipSSL:      false,
-			expectedHost: "localhost:9000",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-		{
-			name:         "https endpoint",
-			endpoint:     "https://minio.example.com",
-			skipSSL:      false,
-			expectedHost: "minio.example.com",
-			expectedSSL:  true,
-			shouldError:  false,
-		},
-		{
-			name:         "https endpoint with skip SSL",
-			endpoint:     "https://minio.example.com",
-			skipSSL:      true,
-			expectedHost: "minio.example.com",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-		{
-			name:         "bare host",
-			endpoint:     "localhost:9000",
-			skipSSL:      false,
-			expectedHost: "localhost:9000",
-			expectedSSL:  true,
-			shouldError:  false,
-		},
-		{
-			name:         "bare host with skip SSL",
-			endpoint:     "localhost:9000",
-			skipSSL:      true,
-			expectedHost: "localhost:9000",
-			expectedSSL:  false,
-			shouldError:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			host, useSSL, err := store.parseMinIOEndpoint(tt.endpoint, tt.skipSSL)
-
-			if tt.shouldError {
-				if err == nil {
-					t.Error("Expected error but got none")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-				return
-			}
-
-			if host != tt.expectedHost {
-				t.Errorf("Expected host %s, got %s", tt.expectedHost, host)
-			}
-
-			if useSSL != tt.expectedSSL {
-				t.Errorf("Expected SSL %v, got %v", tt.expectedSSL, useSSL)
-			}
-		})
-	}
-}
+// TestParseS3Endpoint removed - parseS3Endpoint is now in s3 package
 
 func TestHandleRequest(t *testing.T) {
 	// Create temporary directory for testing

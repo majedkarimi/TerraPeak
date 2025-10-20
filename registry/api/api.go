@@ -13,8 +13,8 @@ import (
 )
 
 type Service struct {
-	cfg         *config.Config
-	store       *store.Store
+	cfg          *config.Config
+	store        *store.Store
 	proxyHandler *proxy.Handler
 }
 

@@ -26,7 +26,7 @@ type Config struct {
 	} `yaml:"terraform"`
 
 	Storage struct {
-		Minio struct {
+		S3 struct {
 			Enabled   bool   `yaml:"enabled"`
 			Endpoint  string `yaml:"endpoint"`
 			Region    string `yaml:"region"`
@@ -34,7 +34,7 @@ type Config struct {
 			SecretKey string `yaml:"secret_key"`
 			Bucket    string `yaml:"bucket"`
 			SkipSSL   bool   `yaml:"skip_ssl_verify"`
-		} `yaml:"minio"`
+		} `yaml:"s3"`
 
 		File struct {
 			Path string `yaml:"path"`
@@ -44,10 +44,10 @@ type Config struct {
 	ServeIf bool `yaml:"serve_if"`
 
 	Proxy struct {
-		Enabled bool   `yaml:"enabled"`
-		Type    string `yaml:"type"` // "http", "socks5", "socks4"
-		Host    string `yaml:"host"`
-		Port    int    `yaml:"port"`
+		Enabled  bool   `yaml:"enabled"`
+		Type     string `yaml:"type"` // "http", "socks5", "socks4"
+		Host     string `yaml:"host"`
+		Port     int    `yaml:"port"`
 		Username string `yaml:"username"`
 		Password string `yaml:"password"`
 	} `yaml:"proxy"`

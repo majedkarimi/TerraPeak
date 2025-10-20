@@ -33,7 +33,7 @@ terraform:
   registry_url: "https://registry.terraform.io"
 
 storage:
-  minio:
+  s3:
     enabled: true
     endpoint: "localhost:9000"
     region: "us-east-1"
@@ -225,5 +225,3 @@ func TestConfigDefaults(t *testing.T) {
 		t.Error("Expected non-nil config")
 	}
 }
-
-
