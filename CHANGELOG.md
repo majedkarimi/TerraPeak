@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/aliharirian/TerraPeak/compare/v1.2.1...v1.2.2) (2025-10-22)
+
+
+### Bug Fixes
+
+* **registry:** consolidate cache proxy ([#2](https://github.com/aliharirian/TerraPeak/issues/2)) ([211b908](https://github.com/aliharirian/TerraPeak/commit/211b908fcae2c477ea38f0fd5bf47216f513e1ad))
+
 ## [1.2.1](https://github.com/aliharirian/TerraPeak/compare/v1.2.0...v1.2.1) (2025-10-20)
 
 
