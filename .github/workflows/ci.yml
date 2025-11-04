@@ -121,6 +121,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
+      - name: Debug semantic-release outputs
+        run: |
+          echo "Debug: Semantic Release Outputs"
+          echo "new_release_published: '${{ steps.semantic.outputs.new_release_published }}'"
+          echo "new_release_version: '${{ steps.semantic.outputs.new_release_version }}'"
+          echo "new_release_type: '${{ steps.semantic.outputs.new_release_type }}'"
+          echo "new_release_notes: '${{ steps.semantic.outputs.new_release_notes }}'"
+
       - name: Release Summary
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
@@ -134,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [versioning]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/add-web-interface' || needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true'
+    if: needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true' || (needs.versioning.result == 'success' && github.ref == 'refs/heads/feat/add-web-interface')
     strategy:
       fail-fast: false
       matrix:
@@ -204,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [versioning]
-    if: needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true'
+    if: needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true' || (needs.versioning.result == 'success' && github.ref == 'refs/heads/feat/add-web-interface')
     strategy:
       fail-fast: false
       matrix:
