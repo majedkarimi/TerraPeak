@@ -86,14 +86,14 @@ jobs:
     name: Semantic Versioning
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [test-go]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/add-web-interface' || github.event.inputs.force_release == 'true'
     outputs:
-      tag: ${{ steps.semantic.outputs.new_release_version }}
-      version: ${{ steps.semantic.outputs.new_release_version }}
-      changelog: ${{ steps.semantic.outputs.new_release_notes }}
-      released: ${{ steps.semantic.outputs.new_release_published }}
-      release_type: ${{ steps.semantic.outputs.new_release_type }}
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      no_new_release: ${{ steps.decide.outputs.no_new_release }}
+      released: ${{ steps.decide.outputs.released }}
+      changelog: ${{ steps.decide.outputs.changelog }}
+      release_type: ${{ steps.decide.outputs.release_type }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,34 +115,51 @@ jobs:
             @semantic-release/exec \
             conventional-changelog-conventionalcommits
 
+      - name: Previous tag (before)
+        id: before
+        run: |
+          git fetch --tags --force || true
+          PREV=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "prev=${PREV}" >> $GITHUB_OUTPUT
+          echo "Previous tag: ${PREV}"
+
       - name: Create semantic release
-        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
 
-      - name: Debug semantic-release outputs
+      - name: Latest tag (after)
+        id: release
         run: |
-          echo "Debug: Semantic Release Outputs"
-          echo "new_release_published: '${{ steps.semantic.outputs.new_release_published }}'"
-          echo "new_release_version: '${{ steps.semantic.outputs.new_release_version }}'"
-          echo "new_release_type: '${{ steps.semantic.outputs.new_release_type }}'"
-          echo "new_release_notes: '${{ steps.semantic.outputs.new_release_notes }}'"
+          git fetch --tags --force
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "Latest tag: ${TAG}; version: ${TAG#v}"
 
-      - name: Release Summary
-        if: steps.semantic.outputs.new_release_published == 'true'
+      - name: Decide if a new release was created
+        id: decide
         run: |
-          echo "New release published!"
-          echo "Version: ${{ steps.semantic.outputs.new_release_version }}"
-          echo "Type: ${{ steps.semantic.outputs.new_release_type }}"
-          echo "Tag: v${{ steps.semantic.outputs.new_release_version }}"
+          if [ "${{ steps.before.outputs.prev }}" = "${{ steps.release.outputs.tag }}" ] || [ -z "${{ steps.release.outputs.tag }}" ]; then
+            echo "no_new_release=true" >> $GITHUB_OUTPUT
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "changelog=" >> $GITHUB_OUTPUT
+            echo "release_type=" >> $GITHUB_OUTPUT
+            echo "No new release created."
+          else
+            echo "no_new_release=false" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "changelog=Release ${{ steps.release.outputs.tag }}" >> $GITHUB_OUTPUT
+            echo "release_type=release" >> $GITHUB_OUTPUT
+            echo "New release: ${{ steps.release.outputs.tag }}"
+          fi
 
   build-registry-binary:
     name: Build Registry Binary
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [versioning]
-    if: needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true' || (needs.versioning.result == 'success' && github.ref == 'refs/heads/feat/add-web-interface')
+    if: needs.versioning.outputs.no_new_release == 'false' || github.event.inputs.force_release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -212,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [versioning]
-    if: needs.versioning.outputs.released == 'true' || github.event.inputs.force_release == 'true' || (needs.versioning.result == 'success' && github.ref == 'refs/heads/feat/add-web-interface')
+    if: needs.versioning.outputs.no_new_release == 'false' || github.event.inputs.force_release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -242,32 +259,24 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
-            ${{ env.DOCKERHUB_REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}
+            ${{ github.repository_owner }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}},value=v${{ needs.versioning.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.versioning.outputs.version }}
-            type=semver,pattern={{major}},value=v${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{version}},value=${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.versioning.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.versioning.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
           labels: |
             org.opencontainers.image.title=TerraPeak ${{ matrix.name }}
             org.opencontainers.image.description=TerraPeak ${{ matrix.name }} component
             org.opencontainers.image.vendor=${{ github.repository_owner }}
             org.opencontainers.image.version=${{ needs.versioning.outputs.version }}
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.DOCKERHUB_REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
@@ -280,12 +289,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            type=gha
-            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:cache
-          cache-to: |
-            type=gha,mode=max
-            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:cache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             VERSION=${{ needs.versioning.outputs.version }}
             BUILD_TIME=${{ github.event.head_commit.timestamp }}
@@ -294,15 +299,9 @@ jobs:
       - name: Scan Docker images for vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
-          format: 'sarif'
-          output: 'trivy-image-${{ matrix.name }}.sarif'
-
-      - name: Upload image scan results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-image-${{ matrix.name }}.sarif'
+          image-ref: ${{ github.repository_owner }}/${{ matrix.image }}:latest
+          format: 'table'
+        continue-on-error: true
 
   release-artifacts:
     name: Release Artifacts
@@ -364,8 +363,14 @@ jobs:
           echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Docker Images Published" >> $GITHUB_STEP_SUMMARY
-          echo "- **Registry**: \`ghcr.io/${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web**: \`ghcr.io/${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry**: \`${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web**: \`${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ github.repository_owner }}/terrapeak-registry:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ github.repository_owner }}/terrapeak-web:v${{ needs.versioning.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Binary Releases" >> $GITHUB_STEP_SUMMARY
           echo "Cross-platform binaries available in GitHub Releases" >> $GITHUB_STEP_SUMMARY
