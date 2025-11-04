@@ -1,3 +1,9 @@
+## [1.3.0-test.3](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.2...v1.3.0-test.3) (2025-11-04)
+
+### 🚀 Features
+
+* **ci:** update semantic versioning logic and improve release summary ([75e347e](https://github.com/aliharirian/TerraPeak/commit/75e347e971964b6f38088d6335ed40752d37fb89))
+
 ## [1.3.0-test.2](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.1...v1.3.0-test.2) (2025-11-04)
 
 ### 🚀 Features
