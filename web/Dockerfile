@@ -5,7 +5,7 @@
 # - Multi-stage build for minimal final image size
 # - Efficient layer caching for faster rebuilds
 # - Security-hardened with non-root user
-# - Optimized for Yarn package manager
+# - Optimized for pnpm package manager
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -14,23 +14,29 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS deps
 
-# Install libc6-compat for compatibility with some native dependencies
-RUN apk add --no-cache libc6-compat
+# Install libc6-compat and pnpm for compatibility with some native dependencies
+RUN apk add --no-cache libc6-compat && \
+    npm install -g pnpm
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json yarn.lock* ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies with frozen lockfile for reproducible builds
-RUN yarn install --frozen-lockfile --production=false
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile
 
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # Build the Next.js application
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
+
+# Install pnpm
+RUN npm install -g pnpm
 
 WORKDIR /app
 
@@ -46,7 +52,9 @@ ENV NODE_ENV=production
 
 # Build the Next.js application
 # This creates optimized production build in .next folder
-RUN yarn build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Runner (Production)
@@ -67,8 +75,11 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy necessary files from builder
-# Copy public assets
+# Copy public assets (if they exist)
 COPY --from=builder /app/public ./public
+
+# Copy package.json for runtime dependencies info
+COPY --from=builder /app/package.json ./package.json
 
 # Copy Next.js standalone output (includes minimal runtime)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -82,7 +93,8 @@ EXPOSE 3000
 
 # Health check to ensure container is ready
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+  CMD node -e "const http = require('http'); const options = { hostname: 'localhost', port: 3000, path: '/api/health', method: 'GET' }; const req = http.request(options, (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1)); req.end();"
 
 # Start the Next.js server
+# The server.js file is created by Next.js standalone build
 CMD ["node", "server.js"]
