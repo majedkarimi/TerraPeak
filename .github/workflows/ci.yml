@@ -2,7 +2,7 @@ name: TerraPeak CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feat/add-web-interface" ]
   pull_request:
     branches: ["feat/*", "fix/*", "hotfix/*"]
   workflow_dispatch:
