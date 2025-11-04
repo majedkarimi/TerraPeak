@@ -1,3 +1,21 @@
+## [1.3.0-test.1](https://github.com/aliharirian/TerraPeak/compare/v1.2.0...v1.3.0-test.1) (2025-11-04)
+
+### 🚀 Features
+
+* **ci:** allow CI to trigger on the feat/add-web-interface branch ([a9af514](https://github.com/aliharirian/TerraPeak/commit/a9af5146cece3f2f440df8e02f2cfb3fcb617dc2))
+* **ci:** enhance CI/CD pipeline with semantic versioning and Docker image updates ([3ff7acc](https://github.com/aliharirian/TerraPeak/commit/3ff7acc7bbd4068ff9eae42d112da9d991564cc7))
+* **ci:** remove npm cache configuration from setup-node action ([6c9453b](https://github.com/aliharirian/TerraPeak/commit/6c9453b82bb54438456b4cc9218c30d544e7cd77))
+* **ci:** simplify deployment notifications and update image names in CI configuration ([9f90bc0](https://github.com/aliharirian/TerraPeak/commit/9f90bc0db3a642b775a4856bd5c51143bc5155ee))
+* **docker:** enhance docker-compose configuration with detailed service definitions and health checks ([7ef57e8](https://github.com/aliharirian/TerraPeak/commit/7ef57e8bcc0dbbadd82ab80270206334f7c62a36))
+* **makefile:** enhance Makefile with unified commands for backend and frontend operations ([b18b353](https://github.com/aliharirian/TerraPeak/commit/b18b353cfd3f5ec0378b224a0ac2e35f77e6dd44))
+* **web:** add Docker support with multi-stage Dockerfile and health check endpoint ([05288be](https://github.com/aliharirian/TerraPeak/commit/05288be4581802c870fc2023ef7bbdbc6adf147f))
+* **web:** init web frontend ([c628ee2](https://github.com/aliharirian/TerraPeak/commit/c628ee22252095d889ce441aa47279bb30b38f1a))
+* **web:** update layout and add browse page for Terraform modules ([259c293](https://github.com/aliharirian/TerraPeak/commit/259c293081ba16567a8ef4cfef4c5507cf6e9022))
+
+### 📚 Documentation
+
+* add contributors file to update GitHub contributors list ([321a3ca](https://github.com/aliharirian/TerraPeak/commit/321a3ca8bc7e32de28a49519799cf1fe9eabf783))
+
 # [1.2.0](https://github.com/aliharirian/TerraPeak/compare/v1.1.0...v1.2.0) (2025-09-30)
 
 
