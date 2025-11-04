@@ -1,3 +1,9 @@
+## [1.3.0-test.2](https://github.com/aliharirian/TerraPeak/compare/v1.3.0-test.1...v1.3.0-test.2) (2025-11-04)
+
+### 🚀 Features
+
+* **ci:** add debugging steps for semantic-release outputs and versioning job ([7765b3f](https://github.com/aliharirian/TerraPeak/commit/7765b3fd863107859986c6f026ff2c73cadffea7))
+
 ## [1.3.0-test.1](https://github.com/aliharirian/TerraPeak/compare/v1.2.0...v1.3.0-test.1) (2025-11-04)
 
 ### 🚀 Features
