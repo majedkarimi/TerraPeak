@@ -108,11 +108,11 @@ run-dev: build ## Build and run TerraPeak
 # Docker targets
 docker-build: ## Build Docker image
 	@echo "🐳 Building Docker image..."
-	docker build -t terrapeak:latest .
+	docker build -t ghcr.io/aliharirian/terrapeak-registry:latest registry/
 
 docker-run: ## Run TerraPeak in Docker container
 	@echo "🐳 Running TerraPeak in Docker..."
-	docker run -p 8081:8081 -v $(PWD)/cfg.yml:/app/cfg.yml:ro terrapeak:latest
+	docker run -p 8081:8081 -v $(PWD)/cfg.yml:/app/cfg.yml:ro ghcr.io/aliharirian/terrapeak-registry:latest
 
 docker-compose-up: ## Start all services with docker-compose
 	@echo "🐳 Starting all TerraPeak services..."
@@ -216,12 +216,12 @@ web-clean: ## Clean Next.js build artifacts
 # Web Docker commands
 web-docker-build: ## Build web Docker image
 	@echo "🐳 Building web Docker image..."
-	cd web && docker build -t terrapeak-web:latest .
+	cd web && docker build -t ghcr.io/aliharirian/terrapeak-web:latest .
 	@echo "✅ Web Docker image built!"
 
 web-docker-run: web-docker-build ## Run web container
 	@echo "🚀 Starting web container..."
-	cd web && docker run -d --name terrapeak-web -p 3000:3000 --restart unless-stopped terrapeak-web:latest
+	cd web && docker run -d --name terrapeak-web -p 3000:3000 --restart unless-stopped ghcr.io/aliharirian/terrapeak-web:latest
 	@echo "✅ Web container started on http://localhost:3000"
 
 web-docker-stop: ## Stop web container

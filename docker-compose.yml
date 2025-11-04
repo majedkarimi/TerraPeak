@@ -22,7 +22,7 @@ services:
   # Registry Service (TerraPeak Backend)
   # =============================================================================
   registry:
-    image: aliharirian/terrapeak:latest
+    image: ghcr.io/aliharirian/terrapeak-registry:latest
     container_name: terrapeak-registry
     ports:
       - "8081:8081"
@@ -65,7 +65,7 @@ services:
       dockerfile: Dockerfile
       args:
         BUILDKIT_INLINE_CACHE: 1
-    image: terrapeak-web:latest
+    image: ghcr.io/aliharirian/terrapeak-web:latest
     container_name: terrapeak-web
     ports:
       - "3000:3000"
